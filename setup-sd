@@ -1,0 +1,18 @@
+#!/bin/bash
+
+dev=$1
+
+# Partition the SD
+parted -s $dev mklabel msdos 
+parted -s $dev mkpart primary fat32 5M 128M  
+parted -s -- $dev mkpart primary ext2 128M -0
+
+# Put u-boot and the signed binaries on
+cd boot
+./sd_fusing.sh $dev
+
+# Make the filesystem on the boot partition
+mkfs.vfat -n boot ${dev}1
+
+# Make the filesystem on the root partition
+mkfs.ext2 -L root ${dev}2
