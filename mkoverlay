@@ -23,10 +23,10 @@ def cmp_files(a, b):
 
     Return False if different"""
 
-    if not os.path.exists(a) or not os.path.exists(b):
+    if not os.path.lexists(a) or not os.path.lexists(b):
         return False
 
-    a_s, b_s = os.stat(a), os.stat(b)
+    a_s, b_s = os.lstat(a), os.lstat(b)
 
     # Check that these two files are the same time and have the
     # same permissions
@@ -159,7 +159,7 @@ for base_dirpath, dirnames, filenames in os.walk(args.basedir):
         base_fname = os.path.join(base_dirpath, fname)
         final_fname = os.path.join(final_dirpath, fname)
 
-        if not os.path.exists(final_fname):
+        if not os.path.lexists(final_fname):
             del_in_overlay(os.path.join(rel_dirpath, fname))
 
 # The overlay always requires the 'old_root' dir
