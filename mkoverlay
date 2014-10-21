@@ -4,6 +4,7 @@ import os
 import shutil
 import stat
 from subprocess import check_call
+import sys
 
 parser = ArgumentParser( description = "Create an overlay for the ODROID" )
 
@@ -97,6 +98,13 @@ def del_in_overlay(relpath):
 
     os.mknod( destpath, 0600 | stat.S_IFCHR, os.makedev(0,0) )
 
+if not os.path.exists(args.outdir):
+    os.mkdir(args.outdir)
+
+if args.squash is not None and os.path.exists(args.squash):
+    print >>sys.stderr, "Error: squashfs output already exists."
+    exit(1)
+
 # Walk finaldir and find files/dirs that don't exist in basedir, or
 # that are different to those in basedir
 
@@ -170,5 +178,6 @@ if not os.path.exists(old_root):
 
 if args.squash is not None:
     check_call( ["mksquashfs", args.outdir, args.squash,
+                 "-noappend",
                  "-comp", "xz",
                  "-Xbcj", "arm,armthumb"] )
