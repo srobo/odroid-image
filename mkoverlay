@@ -68,11 +68,26 @@ def trim_tslash(d):
         d = d[:-1]
     return d
 
+def create_parent_dirs(src_path, relpath):
+    "Duplicate the parent dirs in the overlay"
+
+    parent = os.path.dirname(relpath)
+    if parent != "":
+        create_parent_dirs( os.path.dirname(src_path), parent )
+
+    add_to_overlay(src_path, relpath)
+
 def add_to_overlay(src_path, relpath, wholedir=False):
     "Add the given filename to the overlay"
+    src_path, relpath = [trim_tslash(x) for x in [src_path, relpath]]
     destpath = os.path.join( args.outdir, relpath )
 
     print "Adding", relpath, wholedir
+
+    if not os.path.exists( os.path.dirname(destpath) ):
+        "Output doesn't have the parent directories yet..."
+        create_parent_dirs( os.path.dirname(src_path),
+                            os.path.dirname(relpath) )
 
     if os.path.isdir(src_path):
         if wholedir:
@@ -82,8 +97,7 @@ def add_to_overlay(src_path, relpath, wholedir=False):
             check_call(cmd)
         else:
             cmd = ["/usr/bin/rsync", "-dlptgoD",
-                   trim_tslash(src_path),
-                   trim_tslash(destpath)]
+                   src_path, destpath]
             check_call(cmd)
     else:
         cmd = ["/usr/bin/rsync", "-lptgoD",
