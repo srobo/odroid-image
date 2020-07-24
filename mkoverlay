@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from argparse import ArgumentParser
 import os
 from overlay import cmp_files, trim_fslash, trim_tslash
@@ -33,7 +33,7 @@ def add_to_overlay(src_path, relpath, wholedir=False):
     src_path, relpath = [trim_tslash(x) for x in [src_path, relpath]]
     destpath = os.path.join( args.outdir, relpath )
 
-    print "Adding", relpath, wholedir
+    print("Adding", relpath, wholedir)
 
     if not os.path.exists( os.path.dirname(destpath) ):
         "Output doesn't have the parent directories yet..."
@@ -58,16 +58,16 @@ def add_to_overlay(src_path, relpath, wholedir=False):
 
 def del_in_overlay(relpath):
     "Remove the given path in the overlay"
-    print "Removing", relpath
+    print("Removing", relpath)
     destpath = os.path.join( args.outdir, relpath )
 
-    os.mknod( destpath, 0600 | stat.S_IFCHR, os.makedev(0,0) )
+    os.mknod( destpath, 0o600 | stat.S_IFCHR, os.makedev(0,0) )
 
 if not os.path.exists(args.outdir):
     os.mkdir(args.outdir)
 
 if args.squash is not None and os.path.exists(args.squash):
-    print >>sys.stderr, "Error: squashfs output already exists."
+    print("Error: squashfs output already exists.", file=sys.stderr)
     exit(1)
 
 # Walk finaldir and find files/dirs that don't exist in basedir, or
@@ -106,7 +106,7 @@ for final_dirpath, dirnames, filenames in os.walk(args.finaldir):
             add_to_overlay(final_fname,
                            os.path.join(rel_dirpath, fname))
 
-print "----"
+print("----")
 
 # Walk basedir and find files/dirs that aren't in finaldir
 for base_dirpath, dirnames, filenames in os.walk(args.basedir):
