@@ -6,18 +6,6 @@ import stat
 from subprocess import check_call
 import sys
 
-parser = ArgumentParser( description = "Create an overlay for the ODROID" )
-
-parser.add_argument( "basedir",
-                     help = "Directory containing the base filesystem (i.e. before the overlay is applied)." )
-parser.add_argument( "finaldir",
-                     help = "Directory containing the desired final state of the filesystem after the overlay has been applied." )
-parser.add_argument( "outdir",
-                     help = "Directory to output the overlay to" )
-parser.add_argument( "-s", "--squash",
-                     help = "File to output squashfs filesystem to" )
-
-args = parser.parse_args()
 
 def create_parent_dirs(src_path, relpath):
     "Duplicate the parent dirs in the overlay"
@@ -63,86 +51,101 @@ def del_in_overlay(relpath):
 
     os.mknod( destpath, 0o600 | stat.S_IFCHR, os.makedev(0,0) )
 
-if not os.path.exists(args.outdir):
-    os.mkdir(args.outdir)
+if __name__ == "__main__":
 
-if args.squash is not None and os.path.exists(args.squash):
-    print("Error: squashfs output already exists.", file=sys.stderr)
-    exit(1)
+    parser = ArgumentParser( description = "Create an overlay for the ODROID" )
 
-# Walk finaldir and find files/dirs that don't exist in basedir, or
-# that are different to those in basedir
+    parser.add_argument( "basedir",
+                        help = "Directory containing the base filesystem (i.e. before the overlay is applied)." )
+    parser.add_argument( "finaldir",
+                        help = "Directory containing the desired final state of the filesystem after the overlay has been applied." )
+    parser.add_argument( "outdir",
+                        help = "Directory to output the overlay to" )
+    parser.add_argument( "-s", "--squash",
+                        help = "File to output squashfs filesystem to" )
 
-for final_dirpath, dirnames, filenames in os.walk(args.finaldir):
+    args = parser.parse_args()
 
-    # Path relative to root
-    rel_dirpath = final_dirpath[len(args.finaldir):]
-    rel_dirpath = trim_fslash(rel_dirpath)
+    if not os.path.exists(args.outdir):
+        os.mkdir(args.outdir)
 
-    #print "Walk", rel_dirpath
+    if args.squash is not None and os.path.exists(args.squash):
+        print("Error: squashfs output already exists.", file=sys.stderr)
+        exit(1)
 
-    # Path that this dir would be in basedir
-    base_dirpath = os.path.join( args.basedir, rel_dirpath )
+    # Walk finaldir and find files/dirs that don't exist in basedir, or
+    # that are different to those in basedir
 
-    # Does this directory exist in basedir?
-    if not os.path.exists( base_dirpath ):
-        # It's a new directory
-        add_to_overlay(final_dirpath, rel_dirpath, wholedir=True)
+    for final_dirpath, dirnames, filenames in os.walk(args.finaldir):
 
-        # No point in continuing to recurse into it, as it's all new
-        dirnames[:] = []
-        continue
+        # Path relative to root
+        rel_dirpath = final_dirpath[len(args.finaldir):]
+        rel_dirpath = trim_fslash(rel_dirpath)
 
-    # Directories both exist -- do they have the same perms etc?
-    elif not cmp_files( base_dirpath, final_dirpath ):
-        add_to_overlay(final_dirpath, rel_dirpath)
+        #print "Walk", rel_dirpath
 
-    # Now check our files
-    for fname in filenames:
-        base_fname = os.path.join(base_dirpath, fname)
-        final_fname = os.path.join(final_dirpath, fname)
+        # Path that this dir would be in basedir
+        base_dirpath = os.path.join( args.basedir, rel_dirpath )
 
-        if not cmp_files(base_fname, final_fname):
-            add_to_overlay(final_fname,
-                           os.path.join(rel_dirpath, fname))
+        # Does this directory exist in basedir?
+        if not os.path.exists( base_dirpath ):
+            # It's a new directory
+            add_to_overlay(final_dirpath, rel_dirpath, wholedir=True)
 
-print("----")
+            # No point in continuing to recurse into it, as it's all new
+            dirnames[:] = []
+            continue
 
-# Walk basedir and find files/dirs that aren't in finaldir
-for base_dirpath, dirnames, filenames in os.walk(args.basedir):
+        # Directories both exist -- do they have the same perms etc?
+        elif not cmp_files( base_dirpath, final_dirpath ):
+            add_to_overlay(final_dirpath, rel_dirpath)
 
-    # Path relative to root
-    rel_dirpath = base_dirpath[len(args.basedir):]
-    rel_dirpath = trim_fslash(rel_dirpath)
+        # Now check our files
+        for fname in filenames:
+            base_fname = os.path.join(base_dirpath, fname)
+            final_fname = os.path.join(final_dirpath, fname)
 
-    # Path that would be in finaldir
-    final_dirpath = os.path.join( args.finaldir, rel_dirpath )
+            if not cmp_files(base_fname, final_fname):
+                add_to_overlay(final_fname,
+                            os.path.join(rel_dirpath, fname))
 
-    # Does this directory exist in finaldir?
-    if not os.path.exists( final_dirpath ):
-        # It's been deleted
-        del_in_overlay(rel_dirpath)
+    print("----")
 
-        # No point in continuing, as it's gone
-        dirnames[:] = []
-        continue
+    # Walk basedir and find files/dirs that aren't in finaldir
+    for base_dirpath, dirnames, filenames in os.walk(args.basedir):
 
-    # Now check our files
-    for fname in filenames:
-        base_fname = os.path.join(base_dirpath, fname)
-        final_fname = os.path.join(final_dirpath, fname)
+        # Path relative to root
+        rel_dirpath = base_dirpath[len(args.basedir):]
+        rel_dirpath = trim_fslash(rel_dirpath)
 
-        if not os.path.lexists(final_fname):
-            del_in_overlay(os.path.join(rel_dirpath, fname))
+        # Path that would be in finaldir
+        final_dirpath = os.path.join( args.finaldir, rel_dirpath )
 
-# The overlay always requires the 'old_root' dir
-# This is for pivot_root to run against
-old_root = os.path.join(args.outdir, "old_root")
-if not os.path.exists(old_root):
-    os.mkdir(old_root)
+        # Does this directory exist in finaldir?
+        if not os.path.exists( final_dirpath ):
+            # It's been deleted
+            del_in_overlay(rel_dirpath)
 
-if args.squash is not None:
-    check_call( ["mksquashfs", args.outdir, args.squash,
-                 "-noappend",
-                 "-comp", "xz",
-                 "-Xbcj", "arm,armthumb"] )
+            # No point in continuing, as it's gone
+            dirnames[:] = []
+            continue
+
+        # Now check our files
+        for fname in filenames:
+            base_fname = os.path.join(base_dirpath, fname)
+            final_fname = os.path.join(final_dirpath, fname)
+
+            if not os.path.lexists(final_fname):
+                del_in_overlay(os.path.join(rel_dirpath, fname))
+
+    # The overlay always requires the 'old_root' dir
+    # This is for pivot_root to run against
+    old_root = os.path.join(args.outdir, "old_root")
+    if not os.path.exists(old_root):
+        os.mkdir(old_root)
+
+    if args.squash is not None:
+        check_call( ["mksquashfs", args.outdir, args.squash,
+                    "-noappend",
+                    "-comp", "xz",
+                    "-Xbcj", "arm,armthumb"] )

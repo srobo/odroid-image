@@ -8,41 +8,6 @@ import stat
 import sys
 import tempfile
 
-parser = ArgumentParser( description = "Merge an ODROID overlay on-top of a root filesystem" )
-parser.add_argument( "baseroot",
-                     help = "Base root filesystem on which to apply the overlay" )
-parser.add_argument( "overlay",
-                     help = "Mounted overlay directory" )
-parser.add_argument( "outputdir",
-                     help = "The directory to output the merged result to" )
-parser.add_argument( "-s", "--skip-copy", action="store_true",
-                     help = "Skip to applying the overlay immediately (for debug)" )
-args = parser.parse_args()
-
-# Copy baseroot to output directory
-if not args.skip_copy:
-    if os.path.exists(args.outputdir):
-        print("Error: Output directory already exists", file=sys.stderr)
-        exit(1)
-else:
-    if not os.path.exists(args.outputdir):
-        print("Error: Output directory doesn't exist", file=sys.stderr)
-        exit(1)
-
-if not os.path.exists(args.overlay):
-    print("Error: Overlay directory doesn't exist", file=sys.stderr)
-    exit(1)
-
-if not os.path.isdir(args.overlay):
-    print("Error: Overlay is not a directory", file=sys.stderr)
-    exit(1)
-
-if not args.skip_copy:
-    print("Copying base directory to target...", end=' ')
-    sys.stdout.flush()
-    check_call(["cp", "-a", args.baseroot, args.outputdir])
-    print("done.")
-
 def add_dir(src, dest):
     "Add the given directory (not its contents)"
     print("ADD dir:", dest)
@@ -76,25 +41,62 @@ def whiteout(path):
     else:
         shutil.rmtree(path)
 
-# Iterate through the overlay, replacing things in the target as we go
-for overlay_cur_dirpath, dirnames, filenames in os.walk(args.overlay):
+if __name__ == "__main__":
 
-    # Path relative to root:
-    rel_cur_dirpath = overlay_cur_dirpath[ len(args.overlay): ]
-    rel_cur_dirpath = trim_fslash(rel_cur_dirpath)
+    parser = ArgumentParser( description = "Merge an ODROID overlay on-top of a root filesystem" )
+    parser.add_argument( "baseroot",
+                        help = "Base root filesystem on which to apply the overlay" )
+    parser.add_argument( "overlay",
+                        help = "Mounted overlay directory" )
+    parser.add_argument( "outputdir",
+                        help = "The directory to output the merged result to" )
+    parser.add_argument( "-s", "--skip-copy", action="store_true",
+                        help = "Skip to applying the overlay immediately (for debug)" )
+    args = parser.parse_args()
 
-    for dirname in dirnames:
-        output_full_dirpath = os.path.join( args.outputdir, rel_cur_dirpath, dirname )
-        overlay_full_dirpath = os.path.join( overlay_cur_dirpath, dirname )
+    # Copy baseroot to output directory
+    if not args.skip_copy:
+        if os.path.exists(args.outputdir):
+            print("Error: Output directory already exists", file=sys.stderr)
+            exit(1)
+    else:
+        if not os.path.exists(args.outputdir):
+            print("Error: Output directory doesn't exist", file=sys.stderr)
+            exit(1)
 
-        if not cmp_files( overlay_full_dirpath, output_full_dirpath ):
-            add_dir( overlay_full_dirpath, output_full_dirpath )
+    if not os.path.exists(args.overlay):
+        print("Error: Overlay directory doesn't exist", file=sys.stderr)
+        exit(1)
 
-    for filename in filenames:
-        output_full_filepath = os.path.join( args.outputdir, rel_cur_dirpath, filename )
-        overlay_full_filepath = os.path.join( overlay_cur_dirpath, filename )
+    if not os.path.isdir(args.overlay):
+        print("Error: Overlay is not a directory", file=sys.stderr)
+        exit(1)
 
-        if is_whiteout(overlay_full_filepath):
-            whiteout(output_full_filepath)
-        else:
-            add_file( overlay_full_filepath, output_full_filepath )
+    if not args.skip_copy:
+        print("Copying base directory to target...", end=' ')
+        sys.stdout.flush()
+        check_call(["cp", "-a", args.baseroot, args.outputdir])
+        print("done.")
+
+    # Iterate through the overlay, replacing things in the target as we go
+    for overlay_cur_dirpath, dirnames, filenames in os.walk(args.overlay):
+
+        # Path relative to root:
+        rel_cur_dirpath = overlay_cur_dirpath[ len(args.overlay): ]
+        rel_cur_dirpath = trim_fslash(rel_cur_dirpath)
+
+        for dirname in dirnames:
+            output_full_dirpath = os.path.join( args.outputdir, rel_cur_dirpath, dirname )
+            overlay_full_dirpath = os.path.join( overlay_cur_dirpath, dirname )
+
+            if not cmp_files( overlay_full_dirpath, output_full_dirpath ):
+                add_dir( overlay_full_dirpath, output_full_dirpath )
+
+        for filename in filenames:
+            output_full_filepath = os.path.join( args.outputdir, rel_cur_dirpath, filename )
+            overlay_full_filepath = os.path.join( overlay_cur_dirpath, filename )
+
+            if is_whiteout(overlay_full_filepath):
+                whiteout(output_full_filepath)
+            else:
+                add_file( overlay_full_filepath, output_full_filepath )
