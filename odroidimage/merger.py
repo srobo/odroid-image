@@ -7,39 +7,43 @@ import stat
 import sys
 import tempfile
 
-class OverlayMerger:
 
+class OverlayMerger:
     def __init__(self, baseroot, overlay, outputdir):
         self.baseroot = baseroot
         self.overlay = overlay
         self.outputdir = outputdir
 
     def merge(self):
-         # Iterate through the overlay, replacing things in the target as we go
+        # Iterate through the overlay, replacing things in the target as we go
         for overlay_cur_dirpath, dirnames, filenames in os.walk(self.overlay):
 
             # TODO: Deduplicate this
             # Path relative to root:
-            rel_cur_dirpath = overlay_cur_dirpath[ len(self.overlay): ]
+            rel_cur_dirpath = overlay_cur_dirpath[len(self.overlay) :]
             rel_cur_dirpath = trim_fslash(rel_cur_dirpath)
 
             # Iterate through directories
             for dirname in dirnames:
-                output_full_dirpath = os.path.join( self.outputdir, rel_cur_dirpath, dirname )
-                overlay_full_dirpath = os.path.join( overlay_cur_dirpath, dirname )
+                output_full_dirpath = os.path.join(
+                    self.outputdir, rel_cur_dirpath, dirname
+                )
+                overlay_full_dirpath = os.path.join(overlay_cur_dirpath, dirname)
 
-                if not cmp_files( overlay_full_dirpath, output_full_dirpath ):
-                    self._add_dir( overlay_full_dirpath, output_full_dirpath )
+                if not cmp_files(overlay_full_dirpath, output_full_dirpath):
+                    self._add_dir(overlay_full_dirpath, output_full_dirpath)
 
             # Iterate through filenames
             for filename in filenames:
-                output_full_filepath = os.path.join( self.outputdir, rel_cur_dirpath, filename )
-                overlay_full_filepath = os.path.join( overlay_cur_dirpath, filename )
+                output_full_filepath = os.path.join(
+                    self.outputdir, rel_cur_dirpath, filename
+                )
+                overlay_full_filepath = os.path.join(overlay_cur_dirpath, filename)
 
                 if self._is_whiteout(overlay_full_filepath):
                     self._whiteout(output_full_filepath)
                 else:
-                    self._add_file( overlay_full_filepath, output_full_filepath )
+                    self._add_file(overlay_full_filepath, output_full_filepath)
 
     @staticmethod
     def _add_dir(src, dest):

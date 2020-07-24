@@ -5,6 +5,7 @@ import stat
 from subprocess import check_call
 import sys
 
+
 class OverlayCreator:
     """Create an overlay."""
 
@@ -15,7 +16,7 @@ class OverlayCreator:
 
     def _relative_path(self, path):
         """Find the path relative to root."""
-        rel_dirpath = path[len(self.finaldir):]
+        rel_dirpath = path[len(self.finaldir) :]
         return trim_fslash(rel_dirpath)
 
     def _walk_existing_files(self):
@@ -30,13 +31,13 @@ class OverlayCreator:
             # Path relative to root
             rel_dirpath = self._relative_path(final_dirpath)
 
-            #print "Walk", rel_dirpath
+            # print "Walk", rel_dirpath
 
             # Path that this dir would be in basedir
-            base_dirpath = os.path.join(self.basedir, rel_dirpath )
+            base_dirpath = os.path.join(self.basedir, rel_dirpath)
 
             # Does this directory exist in basedir?
-            if not os.path.exists( base_dirpath ):
+            if not os.path.exists(base_dirpath):
                 # It's a new directory
                 self._add_to_overlay(final_dirpath, rel_dirpath, wholedir=True)
 
@@ -45,7 +46,7 @@ class OverlayCreator:
                 continue
 
             # Directories both exist -- do they have the same perms etc?
-            elif not cmp_files( base_dirpath, final_dirpath ):
+            elif not cmp_files(base_dirpath, final_dirpath):
                 self._add_to_overlay(final_dirpath, rel_dirpath)
 
             # Now check our files
@@ -54,8 +55,7 @@ class OverlayCreator:
                 final_fname = os.path.join(final_dirpath, fname)
 
                 if not cmp_files(base_fname, final_fname):
-                    self._add_to_overlay(final_fname,
-                                os.path.join(rel_dirpath, fname))
+                    self._add_to_overlay(final_fname, os.path.join(rel_dirpath, fname))
 
     def _walk_missing_files(self):
         """Walk basedir and find files/dirs that aren't in finaldir."""
@@ -66,10 +66,10 @@ class OverlayCreator:
             rel_dirpath = self._relative_path(base_dirpath)
 
             # Path that would be in finaldir
-            final_dirpath = os.path.join( self.finaldir, rel_dirpath )
+            final_dirpath = os.path.join(self.finaldir, rel_dirpath)
 
             # Does this directory exist in finaldir?
-            if not os.path.exists( final_dirpath ):
+            if not os.path.exists(final_dirpath):
                 # It's been deleted
                 self._del_in_overlay(rel_dirpath)
 
@@ -90,7 +90,6 @@ class OverlayCreator:
         if not os.path.exists(abs_path):
             os.mkdir(abs_path)
 
-
     def create(self):
         self._walk_existing_files()
 
@@ -101,56 +100,62 @@ class OverlayCreator:
         # The overlay always requires the 'old_root' dir
         # This is for pivot_root to run against
         self._ensure_folder_in_root("old_root")
-           
 
     def generate_squashfs(self, squashdir):
         """Generate a squashfs."""
-        check_call( ["mksquashfs", self.outdir, squashdir,
-                        "-noappend",
-                        "-comp", "xz",
-                        "-Xbcj", "arm,armthumb"] )
-
-
+        check_call(
+            [
+                "mksquashfs",
+                self.outdir,
+                squashdir,
+                "-noappend",
+                "-comp",
+                "xz",
+                "-Xbcj",
+                "arm,armthumb",
+            ]
+        )
 
     def _create_parent_dirs(self, src_path, relpath):
         "Duplicate the parent dirs in the overlay"
         parent = os.path.dirname(relpath)
         if parent != "":
-            self._create_parent_dirs( os.path.dirname(src_path), parent )
+            self._create_parent_dirs(os.path.dirname(src_path), parent)
 
         self._add_to_overlay(src_path, relpath)
 
     def _add_to_overlay(self, src_path, relpath, wholedir=False):
         "Add the given filename to the overlay"
         src_path, relpath = [trim_tslash(x) for x in [src_path, relpath]]
-        destpath = os.path.join( self.outdir, relpath )
+        destpath = os.path.join(self.outdir, relpath)
 
         print("Adding", relpath, wholedir)
 
-        if not os.path.exists( os.path.dirname(destpath) ):
+        if not os.path.exists(os.path.dirname(destpath)):
             "Output doesn't have the parent directories yet..."
-            self._create_parent_dirs( os.path.dirname(src_path),
-                                os.path.dirname(relpath) )
+            self._create_parent_dirs(
+                os.path.dirname(src_path), os.path.dirname(relpath)
+            )
 
         if os.path.isdir(src_path):
             if wholedir:
-                cmd = ["/usr/bin/rsync", "-a",
+                cmd = [
+                    "/usr/bin/rsync",
+                    "-a",
                     "{}/".format(src_path),
-                    "{}/".format(destpath)]
+                    "{}/".format(destpath),
+                ]
                 check_call(cmd)
             else:
-                cmd = ["/usr/bin/rsync", "-dlptgoD",
-                    src_path, destpath]
+                cmd = ["/usr/bin/rsync", "-dlptgoD", src_path, destpath]
                 check_call(cmd)
         else:
-            cmd = ["/usr/bin/rsync", "-lptgoD",
-                src_path, destpath]
+            cmd = ["/usr/bin/rsync", "-lptgoD", src_path, destpath]
             check_call(cmd)
-
 
     def _del_in_overlay(self, relpath):
         "Remove the given path in the overlay"
         print("Removing", relpath)
-        destpath = os.path.join( self.outdir, relpath )
+        destpath = os.path.join(self.outdir, relpath)
 
-        os.mknod( destpath, 0o600 | stat.S_IFCHR, os.makedev(0,0) )
+        os.mknod(destpath, 0o600 | stat.S_IFCHR, os.makedev(0, 0))

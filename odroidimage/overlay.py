@@ -1,6 +1,7 @@
 import os
 import stat
 
+
 def cmp_files(a, b):
     """Compare two files
 
@@ -16,8 +17,7 @@ def cmp_files(a, b):
     if a_s.st_mode != b_s.st_mode:
         return False
 
-    if a_s.st_uid != b_s.st_uid or \
-       a_s.st_gid != b_s.st_gid:
+    if a_s.st_uid != b_s.st_uid or a_s.st_gid != b_s.st_gid:
         return False
 
     # Only compare size if it's a regular file
@@ -38,11 +38,13 @@ def cmp_files(a, b):
     # Files are the same!
     return True
 
+
 def trim_fslash(d):
     "Remove first slash from a path"
     while len(d) and d[0] == "/":
         d = d[1:]
     return d
+
 
 def trim_tslash(d):
     "Remove trailing slashes from a path"
