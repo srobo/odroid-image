@@ -2,7 +2,7 @@
 from argparse import ArgumentParser
 from subprocess import check_call
 import os
-from overlay import trim_fslash, cmp_files
+from .overlay import trim_fslash, cmp_files
 import shutil
 import stat
 import sys

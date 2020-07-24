@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from argparse import ArgumentParser
 import os
-from overlay import cmp_files, trim_fslash, trim_tslash
+from .overlay import cmp_files, trim_fslash, trim_tslash
 import stat
 from subprocess import check_call
 import sys
